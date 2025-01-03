@@ -130,3 +130,21 @@ if (res_iguais) {
 } else {
   print("Os rasters possuem resoluções diferentes.")
 }
+
+#LandScan 
+# Caminhos para os arquivos
+shapefile_path <- "C:/Users/roger/OneDrive/Projetos - Onça/Distribution - 25/Data - shp and tiffs/shps - data/occurrence.shp"
+tif_folder <- "C:/Users/roger/OneDrive/Projetos - Onça/Distribution - 25/Data - shp and tiffs/LandScan/"
+
+# Diretório de saída para Earthenv
+landscan_output_folder <- "C:/Users/roger/OneDrive/Projetos - Onça/Distribution - 25/Data - shp and tiffs/LandScan/"
+
+# Carregar shapefile
+shp <- vect(shapefile_path)
+
+# Importar e combinar preditores diretamente
+predictor <- list.files(tif_folder, pattern = "\\.tif$", full.names = TRUE) %>% rast()
+
+# Processar e salvar LandScan
+output_1 <- terra::crop(predictor, shp, touches = TRUE) %>% mask(shp)
+writeRaster(output_1, filename = file.path(landscan_output_folder, "LandScan_processed.tif"), overwrite = TRUE)
