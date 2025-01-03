@@ -1,4 +1,7 @@
-# Clipping variables - v.0.0.2
+# Clipping variables - Electron - v.0.0.2
+
+# Esse script não utiliza loop ou funções para corte de variáveis pois esbarra em erros de limite de escrita no R (?).
+# A opção é processar as variáveis de forma individual.
 
 # Carregar bibliotecas
 library(terra)
