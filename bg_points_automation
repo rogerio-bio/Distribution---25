@@ -1,0 +1,66 @@
+# BG points automation - v.0.0.1
+
+library(flexsdm)
+library(terra)
+library(dplyr)
+library(readr)
+
+# Caminhos principais
+base_path <- "C:/Users/roger/OneDrive/Projetos - Onça/Distribution - 25/Data - csv"
+predictors_path <- "C:/Users/roger/OneDrive/Projetos - Onça/Distribution - 25/Data - shp and tiffs/Variables - processed"
+study_area_path <- "C:/Users/roger/OneDrive/Projetos - Onça/Distribution - 25/Data - shp and tiffs/shps - data"
+bias_path <- "C:/Users/roger/OneDrive/Projetos - Onça/Distribution - 25/Data - shp and tiffs/Bias/onca_bias_processed.tif"
+
+# Importar arquivos raster preditores
+predictors <- list.files(predictors_path, pattern = ".tif", full.names = TRUE) %>%
+  rast()
+
+# Renomear as camadas do SpatRaster predictors
+names(predictors) <- gsub("CHELSA_bio1_1981-2010_V.2.1", "bio1", names(predictors))
+names(predictors) <- gsub("CHELSA_bio12_1981-2010_V.2.1\\(1\\)", "bio12", names(predictors))
+names(predictors) <- gsub("consensus_full_class_(\\d+)", "class\\1", names(predictors))
+names(predictors) <- gsub("landscan-global-2023", "landscan", names(predictors))
+
+# Importar arquivo de máscara e viés
+neotropical <- vect(study_area_path)
+bias <- rast(bias_path)
+
+# Listar pastas de distâncias
+distance_folders <- list.dirs(base_path, full.names = TRUE, recursive = FALSE)
+
+# Função para processar cada pasta
+process_folder <- function(folder_path) {
+  # Listar arquivos CSV
+  csv_files <- list.files(folder_path, pattern = "gbif", full.names = TRUE)
+  
+  # Garantir que o arquivo "gbif" existe
+  if (length(csv_files) == 0) return()
+  
+  # Importar arquivo de presença
+  gbif_data <- read_csv(csv_files[1])
+
+  # Criar pontos de fundo utilizando Target-Group Background
+  bg <- sample_background(
+    gbif_data, 
+    x = "Longitude", 
+    y = "Latitude", 
+    n = 10000, 
+    method = "biased", 
+    rlayer = predictors$bio1, 
+    calibarea = neotropical,
+    rbias = bias
+  )
+
+  # Remover coluna desnecessária
+  bg$pr_ab <- NULL
+
+  # Criar nome do arquivo de saída
+  folder_name <- basename(folder_path)
+  output_file <- file.path(folder_path, paste0("bg_jaguar_", folder_name, "_gbif.csv"))
+
+  # Exportar pontos de fundo
+  write_csv(bg, output_file)
+}
+
+# Aplicar a função a todas as pastas
+lapply(distance_folders, process_folder)
